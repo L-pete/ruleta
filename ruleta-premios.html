@@ -1,12 +1,14 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>抽奖转盘 | Ruleta de la Suerte</title>
+  <title>Ruleta de Premios</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #fdfbfb, #ebedee);
+      background: url('bg.jpg') no-repeat center center fixed;
+      background-size: cover;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -15,263 +17,14 @@
       padding: 40px 20px;
       margin: 0;
     }
-
-    .container {
-      position: relative;
-      width: 400px;
-      height: 400px;
-    }
-
-    canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      background: white;
-    }
-
-    .pointer {
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-bottom: 40px solid #e91e63;
-    }
-
-    button {
-      margin-top: 15px;
-      padding: 10px 25px;
-      font-size: 16px;
-      font-weight: bold;
-      background: #f50057;
+    h1 {
       color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .history {
-      margin-top: 30px;
-      padding: 20px;
-      width: 100%;
-      max-width: 500px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    }
-
-    .history h3 {
-      margin-top: 0;
-      font-size: 20px;
-      color: #444;
-    }
-
-    .history ul {
-      padding-left: 20px;
-    }
-
-    .history li {
-      margin-bottom: 6px;
-      font-size: 16px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
     }
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <div class="pointer"></div>
-    <canvas id="wheelCanvas" width="400" height="400"></canvas>
-  </div>
-
-  <button id="spinBtn" onclick="spin()">🎁 ¡Gira la ruleta!</button>
-  <button onclick="simulateWin(2)">🧪 模拟抽中 💰200</button>
-  <button onclick="toggleLang()">🌐 切换语言</button>
-  <button onclick="resetTest()">🔧 Modo Test (重置)</button>
-
-  <div class="result" id="resultText">Esperando tu momento de suerte...</div>
-
-  <div class="history">
-    <h3>📝 Historial / 中奖历史</h3>
-    <ul id="historyList"></ul>
-  </div>
-
-  <script>
-    const canvas = document.getElementById("wheelCanvas");
-    const ctx = canvas.getContext("2d");
-    const resultText = document.getElementById("resultText");
-    const spinBtn = document.getElementById("spinBtn");
-    const historyList = document.getElementById("historyList");
-
-    const prizes = [
-      { zh: "📱 手机", es: "📱 Teléfono", probability: 5 },
-      { zh: "🎥 直播设备", es: "🎥 Equipo LIVE", probability: 10 },
-      { zh: "💰 200 美金", es: "💰 200 USD", probability: 15 },
-      { zh: "💵 100 美金", es: "💵 100 USD", probability: 20 },
-      { zh: "💸 50 美金", es: "💸 50 USD", probability: 25 },
-      { zh: "🪙 2000 金币", es: "🪙 2000 Monedas", probability: 25 },
-    ];
-
-    const colors = ["#FF8A80", "#FFD180", "#FFFF8D", "#CCFF90", "#80D8FF", "#B388FF"];
-    const center = canvas.width / 2;
-    const radius = center - 10;
-    const arc = (2 * Math.PI) / prizes.length;
-    let startAngle = 0;
-    let spinning = false;
-
-    let currentLang = localStorage.getItem("lang") || "es";
-    function t(zh, es) {
-      return currentLang === "zh" ? zh : es;
-    }
-
-    function drawWheel() {
-      for (let i = 0; i < prizes.length; i++) {
-        const angle = startAngle + i * arc;
-        ctx.beginPath();
-        ctx.fillStyle = colors[i % colors.length];
-        ctx.moveTo(center, center);
-        ctx.arc(center, center, radius, angle, angle + arc);
-        ctx.fill();
-
-        ctx.save();
-        ctx.fillStyle = "#333";
-        ctx.translate(center, center);
-        ctx.rotate(angle + arc / 2);
-        ctx.textAlign = "right";
-        ctx.font = "bold 16px sans-serif";
-        ctx.fillText(t(prizes[i].zh, prizes[i].es), radius - 15, 5);
-        ctx.restore();
-      }
-
-      ctx.beginPath();
-      ctx.fillStyle = "#fff";
-      ctx.arc(center, center, 40, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.fillStyle = "#e91e63";
-      ctx.font = "bold 16px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(t("开始", "¡Vamos!"), center, center + 5);
-    }
-
-    function getPrizeByProbability() {
-      const weighted = [];
-      prizes.forEach((item, index) => {
-        for (let i = 0; i < item.probability; i++) {
-          weighted.push(index);
-        }
-      });
-      const randIndex = Math.floor(Math.random() * weighted.length);
-      return weighted[randIndex];
-    }
-
-    function spin() {
-      if (spinning) return;
-      if (localStorage.getItem("hasSpun")) {
-        alert(t("你已经抽过奖了", "Ya participaste"));
-        return;
-      }
-
-      spinning = true;
-      const prizeIndex = getPrizeByProbability();
-      animateSpin(prizeIndex);
-    }
-
-    function animateSpin(prizeIndex) {
-      const anglePerPrize = 360 / prizes.length;
-      const endAngle = 360 * 5 + (prizeIndex * anglePerPrize) + anglePerPrize / 2;
-      let currentAngle = 0;
-      const duration = 5000;
-      const start = performance.now();
-
-      function animate(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        currentAngle = easeOut * endAngle;
-        startAngle = (currentAngle * Math.PI) / 180;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawWheel();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          spinning = false;
-          const prizeName = t(prizes[prizeIndex].zh, prizes[prizeIndex].es);
-          resultText.innerText = `🎊 ${t("恭喜你获得：", "¡Felicidades! Ganaste: ")} ${prizeName}`;
-          localStorage.setItem("hasSpun", "true");
-          localStorage.setItem("lastResult", resultText.innerText);
-          addToHistory(prizeName);
-          spinBtn.disabled = true;
-          spinBtn.innerText = t("🎁 已抽奖", "🎁 Ya participaste");
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    function simulateWin(index) {
-      if (spinning) return;
-      if (localStorage.getItem("hasSpun")) {
-        alert(t("你已经抽过奖了", "Ya participaste"));
-        return;
-      }
-      spinning = true;
-      animateSpin(index);
-    }
-
-    function toggleLang() {
-      currentLang = currentLang === "zh" ? "es" : "zh";
-      localStorage.setItem("lang", currentLang);
-      location.reload();
-    }
-
-    function resetTest() {
-      localStorage.removeItem("hasSpun");
-      localStorage.removeItem("lastResult");
-      alert(t("已重置，可以重新测试。", "Reiniciado. Puedes probar otra vez."));
-      location.reload();
-    }
-
-    function addToHistory(prizeName) {
-      const history = JSON.parse(localStorage.getItem("history") || "[]");
-      const date = new Date().toLocaleString();
-      history.push(`${date} — ${prizeName}`);
-      localStorage.setItem("history", JSON.stringify(history));
-      updateHistoryList(history);
-    }
-
-    function updateHistoryList(history) {
-      historyList.innerHTML = "";
-      history.forEach(item => {
-        const li = document.createElement("li");
-        li.textContent = item;
-        historyList.appendChild(li);
-      });
-    }
-
-    // 初始加载
-    if (localStorage.getItem("hasSpun")) {
-      spinBtn.disabled = true;
-      spinBtn.innerText = t("🎁 已抽奖", "🎁 Ya participaste");
-      resultText.innerText = localStorage.getItem("lastResult") || "";
-    }
-    const historyData = JSON.parse(localStorage.getItem("history") || "[]");
-    updateHistoryList(historyData);
-
-    drawWheel();
-  </script>
-
+  <h1>🎁 Bienvenido a la Ruleta de Premios</h1>
+  <p style="color:white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Este es un archivo con fondo latino agregado.</p>
 </body>
 </html>
